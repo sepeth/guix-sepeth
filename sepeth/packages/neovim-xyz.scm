@@ -3,6 +3,7 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
+  #:use-module (guix modules)
   #:use-module (guix utils)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
@@ -4899,17 +4900,21 @@ to be linked into Rust code.")
        (method url-fetch)
        (uri (crate-uri "skia-bindings" version))
        (file-name (string-append name "-" version ".tar.gz"))
+       (patches (list "sepeth/patches/rust-skia-bindings-test.patch"))
        (sha256
         (base32 "0yw4cr83ysql5nxcdqmqj0d6nmb3kf26ddbf3hw9mc30fvlijvn0"))))
     (build-system cargo-build-system)
     (native-inputs
       (list python gn ninja))
+    
     (arguments
-     `(
-      #:modules '((gnu packages ninja)
-                  (gnu packages build-tools))
+     (list
+       ;; #:imported-modules
+       ;;   ,(source-module-closure 
+       ;;      '((gnu packages ninja)
+       ;;        (gnu packages build-tools)))
 
-       #:cargo-inputs (("rust-bindgen" ,rust-bindgen-0.69)
+       #:cargo-inputs `(("rust-bindgen" ,rust-bindgen-0.69)
                        ("rust-cc" ,rust-cc-1)
                        ("rust-flate2" ,rust-flate2-1)
                        ("rust-heck" ,rust-heck-0.5)
@@ -4919,13 +4924,15 @@ to be linked into Rust code.")
                        ("rust-serde-json" ,rust-serde-json-1)
                        ("rust-tar" ,rust-tar-0.4)
                        ("rust-toml" ,rust-toml-0.8))
+
       #:phases
-      (modify-phases %standard-phases
+      #~(modify-phases %standard-phases
           (add-before 'build 'configure-env
             (lambda _
-              (setenv "SKIA_SOURCE_DIR" "FAFAFFA")
-              (setenv "SKIA_GN_COMMAND" (string-append gn "bin/gn"))
-              (setenv "SKIA_NINJA_COMMAND" (string-append ninja "bin/ninja")))))))
+              (setenv "SKIA_SOURCE_DIR" (string-append #$skia))
+              (setenv "SKIA_GN_COMMAND" (string-append #$gn "/bin/gn"))
+              (setenv "SKIA_NINJA_COMMAND" (string-append #$ninja "/bin/ninja")))))
+      ))
     (home-page
      "https://github.com/rust-skia/rust-skia/tree/master/skia-bindings")
     (synopsis "Skia Bindings for Rust")
